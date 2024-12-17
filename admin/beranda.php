@@ -1,9 +1,8 @@
 <?php
 session_start();
 include '../config/database.php';
-
-if ($_SESSION['role'] !== 'admin') {
-    header('Location: ../login.php');
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    header('Location: ../index.php');
     exit();
 }
 
@@ -17,8 +16,8 @@ if (isset($_GET['active_users'])) {
 $kejuruanQuery = $conn->query("
     SELECT ujian.kejuruan, COUNT(DISTINCT user_answers.user_name) AS user_count
     FROM ujian
-    LEFT JOIN questions ON ujian.id = questions.ujian_id
-    LEFT JOIN user_answers ON questions.id = user_answers.question_id
+    LEFT JOIN soal ON ujian.ujian_id = soal.ujian_id
+    LEFT JOIN user_answers ON soal.soal_id = user_answers.soal_id
     GROUP BY ujian.kejuruan
 ");
 
@@ -42,7 +41,6 @@ while ($row = $kejuruanQuery->fetch_assoc()) {
 if (empty($kejuruanData)) {
     echo "Data kejuruan tidak ditemukan!";
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,8 +48,16 @@ if (empty($kejuruanData)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <script src="../js/main.js"></script>
+    <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/styleadmin.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="
+    https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js
+    "></script>
+    <link href="
+    https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css
+    " rel="stylesheet">
 </head>
 <body>
     <div class="container">
@@ -61,39 +67,33 @@ if (empty($kejuruanData)) {
                     <ion-icon name="menu-outline"></ion-icon>
                 </div>
             </div>
-                <div class="card-container" style="margin-top: 90px; margin-left:20px;">
-                    <div class="card">
-                        <div class="icon"><ion-icon name="person-outline"></ion-icon></div>
-                        <div class="details">
-                            <h3>0</h3>
-                            <p>Sedang Ujian</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="icon"><ion-icon name="checkmark-done-outline"></ion-icon></div>
-                        <div class="details">
-                            <h3><?php echo $completedExams; ?></h3>
-                            <p>Selesai Ujian</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="icon"><ion-icon name="briefcase-outline"></ion-icon></div>
-                        <div class="details">
-                            <h3><?php echo $totalKejuruan; ?></h3>
-                            <p>Total Kejuruan</p>
-                        </div>
-                    </div>
-                </div>    
-                <div class="chart-flex">
-                    <div class="chart-container">
-                        <span class="icon"><ion-icon name="bar-chart-outline"></ion-icon></span>
-                        <span class="title">Dashboard</span> <hr>
-                        <p>Test Paragrap</p>   
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="donutChart"></canvas>
-                    </div>
-                </div>
+                <?php
+                if(isset($_GET['page']))
+                {
+                    $page=$_GET['page'];
+                    if ($page=='dashboard'){
+                        include "dashboard.php";
+                    } elseif($page=='soal'){
+                        include "add_question.php";
+                    } elseif($page=='hasil'){
+                        include "view_results.php";
+                    } elseif($page=='setting'){
+                        include "admin_setting.php";
+                    } elseif($page=='hapususer'){
+                        include "delete_user.php";
+                    } elseif($page=='hapusnilai'){
+                        include "hapus_results.php";
+                    } elseif($page=='session'){
+                        include "session.php";
+                    } elseif ($page=='detail'){
+                        include "user_detail.php";
+                    } elseif ($page=='hapusujian'){
+                        include "delete_ujian.php";
+                    }
+                } else {
+                    include "dashboard.php";
+                }
+                ?>
         </div>
     </div>
     <div class="navigation">
@@ -105,25 +105,25 @@ if (empty($kejuruanData)) {
                     </a>
                 </li>
                 <li>
-                    <a href="admin_dashboard.php">
+                    <a href="?page=dashboard">
                         <span class="icon"><ion-icon name="bar-chart-outline"></ion-icon></span>
                         <span class="title">Dashboard</span>
                     </a>
                 </li>
                 <li>
-                    <a href="add_question.php">
+                    <a href="?page=soal">
                         <span class="icon"><ion-icon name="browsers-outline"></ion-icon></span>
-                        <span class="title">Kumpulan Soal</span>
+                        <span class="title">Bank Soal</span>
                     </a>
                 </li>
                 <li>
-                    <a href="view_results.php">
+                    <a href="?page=hasil">
                         <span class="icon"><ion-icon name="newspaper-outline"></ion-icon></span>
                         <span class="title">Hasil Jawaban</span>
                     </a>
                 </li>
                 <li>        
-                    <a href="admin_setting.php">
+                    <a href="?page=setting">
                         <span class="icon"><ion-icon name="settings-outline"></ion-icon></span>
                         <span class="title">Setting Ujian</span>
                     </a>
@@ -136,6 +136,25 @@ if (empty($kejuruanData)) {
                 </li>
             </ul>
         </div>
+    <script>
+        // menu toggle
+        let toggle = document.querySelector(".toggle");
+        let navigation = document.querySelector(".navigation");
+        let main = document.querySelector(".main");
+        toggle.onclick = function () {
+        navigation.classList.toggle("active");
+        main.classList.toggle("active");
+        };
+    </script>
+    <script>
+        setInterval(() => {
+            fetch('?page=dashboard&active_users=true')
+                .then(response => response.text())
+                .then(data => {
+                    document.querySelector('.card:nth-child(1) h3').innerText = data;
+                });
+        }, 1000);
+    </script>
     <script>
         const kejuruanData = <?php echo json_encode($kejuruanData); ?>;
         console.log(kejuruanData);
@@ -169,16 +188,6 @@ if (empty($kejuruanData)) {
                 }
             }
         });
-    </script>
-    <script src="../js/main.js"></script>
-    <script>
-        setInterval(() => {
-            fetch('admin_dashboard.php?active_users=true')
-                .then(response => response.text())
-                .then(data => {
-                    document.querySelector('.card:nth-child(1) h3').innerText = data;
-                });
-        }, 1000);
     </script>
     <script
       type="module"

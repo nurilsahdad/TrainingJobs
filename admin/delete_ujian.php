@@ -10,21 +10,32 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Pastikan parameter ID dikirimkan
-if (!isset($_GET['id'])) {
-    echo json_encode(['success' => false, 'message' => 'ID tidak ditemukan.']);
+// Periksa parameter yang dikirimkan
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    echo json_encode(['success' => false, 'message' => 'ID ujian tidak valid.']);
     exit();
 }
 
-$id = intval($_GET['id']);
+$ujian_id = intval($_GET['id']);
 
-// Hapus data ujian berdasarkan ID
-$query = $conn->prepare("DELETE FROM ujian WHERE id = ?");
-$query->bind_param('i', $id);
+// Periksa apakah ujian ada di database
+$checkQuery = $conn->prepare("SELECT COUNT(*) as count FROM ujian WHERE ujian_id = ?");
+$checkQuery->bind_param('i', $ujian_id);
+$checkQuery->execute();
+$result = $checkQuery->get_result()->fetch_assoc();
 
-if ($query->execute()) {
-    echo json_encode(['success' => true]);
+if ($result['count'] == 0) {
+    echo json_encode(['success' => false, 'message' => 'Ujian tidak ditemukan.']);
+    exit();
+}
+
+// Hapus data ujian
+$deleteQuery = $conn->prepare("DELETE FROM ujian WHERE ujian_id = ?");
+$deleteQuery->bind_param('i', $ujian_id);
+
+if ($deleteQuery->execute()) {
+    echo json_encode(['success' => true, 'message' => 'Ujian berhasil dihapus.']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Gagal menghapus data.']);
+    echo json_encode(['success' => false, 'message' => 'Gagal menghapus ujian.']);
 }
 ?>

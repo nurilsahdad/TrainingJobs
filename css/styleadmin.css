@@ -7,7 +7,7 @@
 :root {
   --blue: #2a2185;
   --white: #fff;
-  --grey: #f5f5f5;
+  --grey: #616161;
   --black1: #2002c99a;
   --black2: #999;
   --black3: #4946a0; /* potentially gradient for better colour or images, depends*/
@@ -163,8 +163,7 @@ body {
 }
 
 .contain {
-  margin-top: 70px;
-  top: 20px;
+  margin-top: 100px;
   left: 20px;
   position: relative;
   min-height: calc(100vh - 100px);
@@ -347,6 +346,9 @@ div[style*="overflow-x: auto"] {
 
 .card:nth-child(1) {
   background-color: rgb(233, 47, 47);
+}
+.card:nth-child(1):hover {
+  background-color: rgb(176, 37, 37);
 }
 
 .card:nth-child(2) {

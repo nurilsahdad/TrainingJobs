@@ -1,9 +1,8 @@
 <?php
-session_start();
 include '../config/database.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../login.php');
+    header('Location: ../index.php');
     exit();
 }
 
@@ -15,6 +14,6 @@ if ($conn->query($sql) === TRUE) {
     $_SESSION['message'] = "Gagal menghapus hasil jawaban: " . $conn->error;
 }
 
-header("Location: view_results.php");
+header("Location: ?page=hasil");
 exit();
 ?>

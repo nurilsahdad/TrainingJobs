@@ -1,10 +1,9 @@
 <?php
-session_start();
 include '../config/database.php';
 
 // Pastikan hanya admin yang bisa mengakses
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../login.php');
+    header('Location: ../index.php');
     exit();
 }
 
@@ -20,11 +19,11 @@ $sql = "
         u.kejuruan, 
         CONVERT_TZ(MAX(ua.tanggal_pengerjaan), '+00:00', '+06:00') AS last_attempt, 
         (SUM(CASE WHEN c.is_correct = 1 THEN 1 ELSE 0 END) / 
-        (SELECT COUNT(*) FROM questions WHERE ujian_id = u.id)) * 100 AS score
+        (SELECT COUNT(*) FROM soal WHERE ujian_id = u.ujian_id)) * 100 AS score
     FROM user_answers ua
-    JOIN questions q ON ua.question_id = q.id
-    JOIN ujian u ON q.ujian_id = u.id
-    JOIN choices c ON ua.answer = c.id
+    JOIN soal q ON ua.soal_id = q.soal_id
+    JOIN ujian u ON q.ujian_id = u.ujian_id
+    JOIN pilihan c ON ua.pilihan_id = c.pilihan_id
 ";
 
 // Filter jika ada kejuruan yang dipilih

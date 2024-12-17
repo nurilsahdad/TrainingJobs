@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($result->num_rows > 0) {
         $_SESSION['role'] = 'admin';
 
-        header('Location: admin/admin_dashboard.php');
+        header('Location: admin/beranda.php');
         exit();
     } else {
         $err = "Kode admin tidak valid!";
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div style="text-align:center; padding-top:10px; padding-bottom:10px; color:red; font-size:14px;"> <?php echo $err; ?></div>
                 <input type="submit" value="Login">
             </form><br>
-            <a href="login.php">User</a>
+            <a href="index.php">User</a>
             <a href="login_admin.php" style="float:right;">Admin</a>
         </div>
     </div>

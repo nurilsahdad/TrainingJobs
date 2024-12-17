@@ -1,9 +1,8 @@
 <?php
-session_start();
 include '../config/database.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../login.php');
+    header('Location: ../index.php');
     exit();
 }
 
@@ -18,6 +17,6 @@ if (isset($_GET['user_name'])) {
     }
 }
 
-header("Location: view_results.php");
+header("Location: ?page=hasil");
 exit();
 ?>

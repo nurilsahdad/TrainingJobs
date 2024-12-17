@@ -1,9 +1,8 @@
 <?php
-session_start();
 include '../config/database.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header('Location: ../login.php');
+    header('Location: ../index.php');
     exit();
 }
 
@@ -13,15 +12,15 @@ $sql = "
     SELECT 
         ua.user_name, 
         u.kejuruan, 
-        COUNT(DISTINCT ua.question_id) AS total_answered, 
+        COUNT(DISTINCT ua.soal_id) AS total_answered, 
         SUM(CASE WHEN c.is_correct = 1 THEN 1 ELSE 0 END) AS total_correct,
-        (SELECT COUNT(*) FROM questions WHERE ujian_id = u.id) AS total_questions,
-        (SUM(CASE WHEN c.is_correct = 1 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM questions WHERE ujian_id = u.id)) * 100 AS score,
+        (SELECT COUNT(*) FROM soal WHERE ujian_id = u.ujian_id) AS total_soal,
+        (SUM(CASE WHEN c.is_correct = 1 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM soal WHERE ujian_id = u.ujian_id)) * 100 AS score,
         ua.tanggal_pengerjaan 
     FROM user_answers ua
-    JOIN questions q ON ua.question_id = q.id
-    JOIN ujian u ON q.ujian_id = u.id
-    JOIN choices c ON ua.answer = c.id
+    JOIN soal q ON ua.soal_id = q.soal_id
+    JOIN ujian u ON q.ujian_id = u.ujian_id
+    JOIN pilihan c ON ua.pilihan_id = c.pilihan_id
 ";
 
 if ($filterKejuruan) {
@@ -50,20 +49,6 @@ switch ($orderBy) {
 $users = $conn->query($sql);
 $kejuruanOptions = $conn->query("SELECT DISTINCT kejuruan FROM ujian");
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hasil Jawaban Semua User</title>
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/styleadmin.css">
-    <script src="
-    https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js
-    "></script>
-    <link href="
-    https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css
-    " rel="stylesheet">
     <style>
         a {
             text-decoration: none;
@@ -73,22 +58,13 @@ $kejuruanOptions = $conn->query("SELECT DISTINCT kejuruan FROM ujian");
             grid-template-columns: 40px 1fr 1fr 1fr 1fr 1fr;
         }
     </style>
-</head>
-<body>
-    <div class="container">
-        <div class="main">
-            <div class="topbar">
-                <div class="toggle">
-                    <ion-icon name="menu-outline"></ion-icon>
-                </div>
-            </div>
-
             <div class="contain">
-                <h2 style="padding-left:10px; padding-top:10px;">Hasil Jawaban User</h2>
+                <h2 style="padding-left:10px; padding-top:10px;">Hasil Jawaban</h2>
                 <div class="action-container">
                 <button id="export-excel-btn" class="action-btn">Export Excel</button>
                 <button id="delete-results-btn" class="action-btn">Hapus Hasil</button>
-                <form method="GET" action="view_results.php">
+                <form method="GET" action="?page=hasil">
+                    <input type="hidden" name="page" value="soal">
                     <label for="kejuruan" style="padding-left:10px;">Filter Kejuruan: </label>
                     <select name="kejuruan" id="kejuruan" onchange="this.form.submit()" class="filter_kejuruan">
                         <option value="">Semua Kejuruan</option>
@@ -133,7 +109,7 @@ $kejuruanOptions = $conn->query("SELECT DISTINCT kejuruan FROM ujian");
                             $no = 1;
                             if ($users->num_rows > 0) {
                                 while ($user = $users->fetch_assoc()) {
-                                    $score = ($user['total_correct'] / $user['total_questions']) * 100;
+                                    $score = ($user['total_correct'] / $user['total_soal']) * 100;
                                     
                                     // Mengonversi tanggal pengerjaan ke WIB
                                     $tanggalPengerjaan = new DateTime($user['tanggal_pengerjaan']);
@@ -141,7 +117,7 @@ $kejuruanOptions = $conn->query("SELECT DISTINCT kejuruan FROM ujian");
                                     $tanggalPengerjaanFormatted = $tanggalPengerjaan->format('Y-m-d H:i:s'); // Format ke 'YYYY-MM-DD HH:MM:SS'
 
                                     echo "<div class='table-cell'>". $no++ ."</div>";
-                                    echo "<div class='table-cell'><a href='user_detail.php?user_name=" . urlencode($user['user_name']) . "'>" . htmlspecialchars($user['user_name']) . "</a></div>";
+                                    echo "<div class='table-cell'><a href='?page=detail&user_name=" . urlencode($user['user_name']) . "'>" . htmlspecialchars($user['user_name']) . "</a></div>";
                                     echo "<div class='table-cell'>" . htmlspecialchars($user['kejuruan']) . "</div>"; 
                                     echo "<div class='table-cell'>" . htmlspecialchars($tanggalPengerjaanFormatted) . "</div>"; // Tampilkan waktu WIB
                                     echo "<div class='table-cell'>" . number_format($score, 2) . "</div>"; 
@@ -151,51 +127,7 @@ $kejuruanOptions = $conn->query("SELECT DISTINCT kejuruan FROM ujian");
                         ?>
                     </div>
                 </div>
-            </div>
         </div>
-
-        <!-- Navigasi -->
-        <div class="navigation">
-            <ul>
-                <li>
-                    <a href="#">
-                    <span class="icon"><img src="../img/logo-karawang.png" alt=""></span>
-                    <span class="title" style="font-size:20px; margin-top:10px;">DISNAKERTRANS</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="admin_dashboard.php">
-                        <span class="icon"><ion-icon name="bar-chart-outline"></ion-icon></span>
-                        <span class="title">Dashboard</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="add_question.php">
-                        <span class="icon"><ion-icon name="browsers-outline"></ion-icon></span>
-                        <span class="title">Kumpulan Soal</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="view_results.php">
-                        <span class="icon"><ion-icon name="newspaper-outline"></ion-icon></span>
-                        <span class="title">Hasil Jawaban</span>
-                    </a>
-                </li>
-                <li>        
-                    <a href="admin_setting.php">
-                        <span class="icon"><ion-icon name="settings-outline"></ion-icon></span>
-                        <span class="title">Setting Ujian</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="logout.php">
-                        <span class="icon"><ion-icon name="exit-outline"></ion-icon></span>
-                        <span class="title">Logout</span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </div>
     <script>
     document.getElementById('export-excel-btn').addEventListener('click', function () {
         Swal.fire({
@@ -225,7 +157,7 @@ $kejuruanOptions = $conn->query("SELECT DISTINCT kejuruan FROM ujian");
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = 'delete_results.php';
+                window.location.href = '?page=hapusnilai';
             }
         });
     });
@@ -240,20 +172,11 @@ $kejuruanOptions = $conn->query("SELECT DISTINCT kejuruan FROM ujian");
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = `delete_user.php?user_name=${encodeURIComponent(userName)}`;
+                window.location.href = `?page=hapususer&user_name=${encodeURIComponent(userName)}`;
             }
         });
     }
     </script>
-    <script src="../js/main.js"></script>
-    <script
-      type="module"
-      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
-    ></script>
-    <script
-      nomodule
-      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
-    ></script>
     <script>
        document.getElementById('sort-name').addEventListener('click', function() {
             let order = '<?= $orderBy ?>' === 'name_asc' ? 'name_desc' : 'name_asc';
@@ -265,5 +188,3 @@ $kejuruanOptions = $conn->query("SELECT DISTINCT kejuruan FROM ujian");
             window.location.href = `?order_by=${order}&kejuruan=<?= $filterKejuruan ?>`;
         });
     </script>
-</body>
-</html>

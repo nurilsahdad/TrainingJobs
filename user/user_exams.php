@@ -3,15 +3,14 @@ session_start();
 include '../config/database.php';
 
 if (!isset($_SESSION['user_name']) || !isset($_SESSION['kodeujian'])) {
-    header('Location: ../login.php');
+    header('Location: ../index.php');
     exit();
 }
-
 
 $_SESSION['exam_active'] = true;
 $kodeujian = $_SESSION['kodeujian'];
 
-$result = $conn->query("SELECT timer, kejuruan, id AS ujian_id FROM ujian WHERE kodeujian = '$kodeujian'");
+$result = $conn->query("SELECT timer, kejuruan, ujian_id FROM ujian WHERE kodeujian = '$kodeujian'");
 if ($result->num_rows == 0) {
     die("Kode ujian tidak valid!");
 }
@@ -28,7 +27,7 @@ $conn->query("INSERT INTO sessions (user_name, exam_active, kejuruan)
               ON DUPLICATE KEY UPDATE exam_active = 1, last_updated = NOW()");
 
 
-$questions = $conn->query("SELECT * FROM questions WHERE ujian_id = $ujian_id");
+$questions = $conn->query("SELECT * FROM soal WHERE ujian_id = $ujian_id");
 $questionArray = [];
 while ($row = $questions->fetch_assoc()) {
     $questionArray[] = $row;
@@ -37,6 +36,12 @@ while ($row = $questions->fetch_assoc()) {
 ?>
 <link rel="stylesheet" href="../css/style.css">
 <link rel="stylesheet" href="../css/styleujian.css">
+<script src="
+https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.all.min.js
+"></script>
+<link href="
+https://cdn.jsdelivr.net/npm/sweetalert2@11.14.5/dist/sweetalert2.min.css
+" rel="stylesheet">
 <style>
     .sidepanel{
         background-color:#ffffffcb;
@@ -78,11 +83,11 @@ while ($row = $questions->fetch_assoc()) {
             <input type="hidden" name="current_question" id="current_question" value="0">
             <?php foreach ($questionArray as $index => $question): ?>
                 <div class="question" id="question-<?php echo $index; ?>" style="display: none;">
-                    <p><?php echo $question['question_text']; ?></p>
+                    <p><?php echo $question['soal_text']; ?></p>
                     <?php
-                    $choices = $conn->query("SELECT * FROM choices WHERE question_id = " . $question['id']);
+                    $choices = $conn->query("SELECT * FROM pilihan WHERE soal_id = " . $question['soal_id']);
                     while ($choice = $choices->fetch_assoc()) {
-                        echo "<input type='radio' class='custom-radio' name='answers[" . $question['id'] . "]' value='" . $choice['id'] . "' onchange='saveAnswer(" . $question['id'] . ", " . $choice['id'] . ")'>" . $choice['choice_text'] . "<br><br>";   
+                        echo "<input type='radio' class='custom-radio' name='answers[" . $question['soal_id'] . "]' value='" . $choice['pilihan_id'] . "' onchange='saveAnswer(" . $question['soal_id'] . ", " . $choice['pilihan_id'] . ")'>" . $choice['pilihan_text'] . "<br><br>";   
                     }
                     ?>
                 </div>
@@ -97,6 +102,25 @@ while ($row = $questions->fetch_assoc()) {
     </div>
 
 <script>
+    document.getElementById('finish').addEventListener('click', function(event) {
+    event.preventDefault(); // Mencegah pengiriman form secara langsung
+
+    Swal.fire({
+        title: 'Apakah Anda yakin?',
+        text: 'Pastikan semua jawaban sudah benar sebelum menyelesaikan ujian.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Selesaikan',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('exam-form').submit(); // Kirim form jika pengguna mengonfirmasi
+        }
+    });
+});
+
     function OpenNav() {
         document.getElementById("mysidepanel").style.width = "250px"; // Buka panel
         document.getElementById("myOverlay").style.display = "block"; // Tampilkan overlay

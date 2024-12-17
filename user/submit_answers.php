@@ -4,7 +4,7 @@ include '../config/database.php';
 
 // Pastikan session sudah ada
 if (!isset($_SESSION['user_name'])) {
-    header('Location: ../login.php');
+    header('Location: ../index.php');
     exit();
 }
 
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
 
             // Menyimpan data ke database
-            $conn->query("INSERT INTO user_answers (user_name, question_id, answer, tanggal_pengerjaan) 
+            $conn->query("INSERT INTO user_answers (user_name, soal_id, pilihan_id, tanggal_pengerjaan) 
                           VALUES ('$user_name', $question_id, $answer, '$tanggal_pengerjaan')");
         }
     } else {
@@ -56,17 +56,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if ($is_all_answered) {
-        echo "";
+        session_destroy();
+        header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+        header("Cache-Control: post-check=0, pre-check=0", false);
+        header("Pragma: no-cache");
+        header("Location: ../logout.php");
+        exit();
     } else {    
-        echo "Beberapa pertanyaan belum dijawab.";
+        session_destroy();
+        header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+        header("Cache-Control: post-check=0, pre-check=0", false);
+        header("Pragma: no-cache");
+        header("Location: ../logout.php");
+        exit();
     }
 }
-
-    echo "<script>
-        localStorage.removeItem('answers');
-        localStorage.removeItem('timeLeft');
-        localStorage.removeItem('currentQuestion');
-    </script>";
+ 
 ?>
 
 <!DOCTYPE html>
@@ -95,10 +100,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </form>
 
     <script>
+        localStorage.removeItem('answers');
+        localStorage.removeItem('timeLeft');
+        localStorage.removeItem('currentQuestion');
+
         let waktuPerangkat = new Date();
         let waktuIndo = new Date(waktuPerangkat.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
         let tanggalPengerjaan = waktuIndo.toISOString().slice(0, 19).replace("T", " ");
         document.getElementById('tanggal_pengerjaan').value = tanggalPengerjaan;
+
+        history.pushState(null, null, location.href);
+        window.addEventListener('popstate', function () {
+            location.href = '../logout.php';
+        });
     </script>
 </body>
 </html>
